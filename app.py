@@ -9,13 +9,14 @@ uploaded_base = st.file_uploader("請上傳主檔案 (例如 mount_2024.csv)", t
 # 上傳要合併的檔案
 uploaded_add = st.file_uploader("請上傳要合併的檔案 (例如 Price_ATC_S.csv)", type="csv", key="add")
 
-# 初始化欄位選擇器
-key_col = None
-
 if uploaded_base and uploaded_add:
     try:
         base_df = pd.read_csv(uploaded_base)
         add_df = pd.read_csv(uploaded_add)
+
+        # 顯示欄位清單，方便檢查
+        st.write("📑 主檔案欄位：", base_df.columns.tolist())
+        st.write("📑 合併檔案欄位：", add_df.columns.tolist())
 
         # 自動偵測共同欄位
         common_cols = list(set(base_df.columns) & set(add_df.columns))
