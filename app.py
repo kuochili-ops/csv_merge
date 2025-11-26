@@ -1,16 +1,31 @@
+import streamlit as st
 import pandas as pd
 
-# 讀取兩個 CSV 檔案 (UTF-8 編碼)
-mount_df = pd.read_csv("mount_2024.csv", encoding="utf-8")
-price_df = pd.read_csv("Price_ATC_S.csv", encoding="utf-8")
+st.title("CSV 合併工具")
 
-# 只保留 mount_2024.csv 中需要的欄位
-mount_selected = mount_df[["藥品代碼", "含包裹支付的醫令量_合計"]]
+# 上傳檔案
+mount_file = st.file_uploader("請上傳 mount_2024.csv", type="csv")
+price_file = st.file_uploader("請上傳 Price_ATC_S.csv", type="csv")
 
-# 依照「藥品代碼」合併
-merged_df = pd.merge(price_df, mount_selected, on="藥品代碼", how="left")
+if mount_file and price_file:
+    # 讀取 CSV
+    mount_df = pd.read_csv(mount_file, encoding="utf-8")
+    price_df = pd.read_csv(price_file, encoding="utf-8")
 
-# 輸出成新的 UTF-8 CSV 檔案
-merged_df.to_csv("merged_output.csv", encoding="utf-8", index=False)
+    # 只保留需要的欄位
+    mount_selected = mount_df[["藥品代碼", "含包裹支付的醫令量_合計"]]
 
-print("合併完成！檔案已輸出為 merged_output.csv")
+    # 合併
+    merged_df = pd.merge(price_df, mount_selected, on="藥品代碼", how="left")
+
+    st.success("合併完成！以下是結果預覽：")
+    st.dataframe(merged_df.head(20))
+
+    # 提供下載
+    csv = merged_df.to_csv(index=False, encoding="utf-8").encode("utf-8")
+    st.download_button(
+        label="下載合併後的 CSV",
+        data=csv,
+        file_name="merged_output.csv",
+        mime="text/csv",
+    )
