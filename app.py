@@ -1,46 +1,42 @@
+import streamlit as st
 import pandas as pd
 
-def merge_csv(base_file, add_file, output_file, key_col=None):
-    """
-    以 base_file 為基礎，將 add_file 中相同 key_col 的欄位整合進來
-    並輸出成 UTF-8 格式的 CSV
+st.title("CSV 合併工具")
 
-    Parameters:
-    base_file (str): 主檔案路徑 (例如 mount_2024.csv)
-    add_file (str): 要合併的檔案路徑 (例如 Price_ATC_S.csv)
-    output_file (str): 輸出檔案路徑 (例如 merged_output.csv)
-    key_col (str): 合併的共同欄位名稱。如果為 None，會自動偵測交集欄位
-    """
+# 上傳檔案
+uploaded_base = st.file_uploader("請上傳主檔案 (mount_2024.csv)", type="csv")
+uploaded_add = st.file_uploader("請上傳要合併的檔案 (Price_ATC_S.csv)", type="csv")
 
-    # 讀取 CSV
-    base_df = pd.read_csv(base_file)
-    add_df = pd.read_csv(add_file)
+# 指定共同欄位
+key_col = st.text_input("請輸入共同欄位名稱 (例如 drug_code)")
 
-    # 如果沒有指定 key_col，則自動偵測共同欄位
-    if key_col is None:
-        common_cols = list(set(base_df.columns) & set(add_df.columns))
-        if not common_cols:
-            raise ValueError("兩個檔案沒有共同欄位，請手動指定 key_col")
-        key_col = common_cols[0]  # 預設取第一個共同欄位
-        print(f"自動偵測共同欄位：{key_col}")
+if uploaded_base and uploaded_add and key_col:
+    try:
+        # 讀取 CSV
+        base_df = pd.read_csv(uploaded_base)
+        add_df = pd.read_csv(uploaded_add)
 
-    # 合併
-    merged_df = pd.merge(
-        base_df,
-        add_df.drop(columns=[key_col]),  # 避免重複 key_col
-        left_on=key_col,
-        right_on=key_col,
-        how="left"   # 以 base_file 為主
-    )
+        # 合併
+        merged_df = pd.merge(
+            base_df,
+            add_df.drop(columns=[key_col], errors="ignore"),  # 避免重複欄位
+            on=key_col,
+            how="left"   # 以主檔為基準
+        )
 
-    # 輸出 UTF-8 格式
-    merged_df.to_csv(output_file, index=False, encoding="utf-8")
-    print(f"已生成 {output_file}，共 {len(merged_df)} 筆資料")
+        st.success(f"合併完成，共 {len(merged_df)} 筆資料")
 
-# 使用範例
-merge_csv(
-    base_file="mount_2024.csv",
-    add_file="Price_ATC_S.csv",
-    output_file="merged_output.csv",
-    key_col="drug_code"   # 如果欄位名稱不同，改成實際的藥品代碼欄位
-)
+        # 顯示前幾筆
+        st.dataframe(merged_df.head())
+
+        # 提供下載
+        csv_utf8 = merged_df.to_csv(index=False, encoding="utf-8")
+        st.download_button(
+            label="下載合併後的 CSV (UTF-8)",
+            data=csv_utf8,
+            file_name="merged_output.csv",
+            mime="text/csv"
+        )
+
+    except Exception as e:
+        st.error(f"合併失敗：{e}")
